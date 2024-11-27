@@ -1,8 +1,0 @@
-# Ignore build directories and compiled executables
-build/
-lstree
-
-# Ignore editor-specific and temporary files
-*.swp
-*.swo
-*.DS_Store
