@@ -1,20 +1,8 @@
-# Ignore the compiled executable
+# Ignore build directories and compiled executables
+build/
 lstree
 
-# Ignore build directories
-build/
-bin/
-
-# Ignore temporary files
-*.tmp
-*.log
-
-# Ignore object files and binaries
-*.o
-*.obj
-*.exe
-
-# Ignore editor-specific files
+# Ignore editor-specific and temporary files
 *.swp
 *.swo
 *.DS_Store

@@ -1,3 +1,4 @@
+#include "../include/argparse.hpp"
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -202,19 +203,33 @@ void generate_directory_hierarchy(
 }
 
 int main(int argc, char* argv[]) {
-    // Validate command-line arguments
-    if (argc != 4) {
-        cout << "Usage: " << argv[0] 
-             << " <directory_path>" 
-             << " <X_SPACING>"
-             << " <Y_SPACING>"
-             << endl;
+    // Initialize argparse
+    argparse::ArgumentParser program("lstree", "1.0");
+    // Define arguments with defaults
+    program.add_argument("directory_path")
+        .default_value(std::string("."))
+        .help("Path to the directory to visualize. Defaults to the current directory.");
+    program.add_argument("-x", "--x_spacing")
+        .default_value(3)
+        .scan<'i', int>() // Parse as integer
+        .help("Horizontal spacing (number of spaces). Defaults to 3.");
+    program.add_argument("-y", "--y_spacing")
+        .default_value(1)
+        .scan<'i', int>() // Parse as integer
+        .help("Vertical spacing (number of lines). Defaults to 1.");
+    // Parse arguments
+    try {
+        program.parse_args(argc, argv);
+    } catch (const std::runtime_error& err) {
+        std::cerr << "Error: " << err.what() << std::endl;
+        std::cout << program;
         return 1;
     }
-    // Parse arguments
-    string directory_path = argv[1];
-    unsigned int x_spacing = stoul(argv[2]);
-    unsigned int y_spacing = stoul(argv[3]);
+
+    // Retrieve parsed values
+    std::string directory_path = program.get<std::string>("directory_path");
+    int x_spacing = program.get<int>("--x_spacing");
+    int y_spacing = program.get<int>("--y_spacing");
 
     // Initialize root level state
     level_states[0] = NO_VALUE;
