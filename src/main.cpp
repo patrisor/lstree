@@ -27,6 +27,31 @@ enum LevelState {
 // Maps each directory depth level to its current iteration state.
 map<int, LevelState> level_states;
 
+// Function Declarations
+void process_directory_entries(
+    const string& path,
+    unsigned int x_spacing,
+    unsigned int y_spacing,
+    unsigned int depth,
+    unsigned int entry_count
+);
+void generate_directory_hierarchy(
+    string& path,
+    unsigned int x_spacing,
+    unsigned int y_spacing,
+    unsigned int depth
+);
+string generate_hierarchy_format_string(LevelState state);
+string generate_character_string(unsigned int n, string s);
+string generate_x_padding_string(unsigned int depth, unsigned int x_spacing);
+string generate_entry_string(
+    const string& path,
+    unsigned int x_spacing,
+    unsigned int y_spacing,
+    unsigned int depth
+);
+unsigned int get_directory_entry_count(const string& directory_path);
+
 /**
  * @brief Generates the hierarchy format string based on the level state.
  *
@@ -104,9 +129,11 @@ string generate_entry_string(
     if (level_states[depth] == NO_VALUE)
         return path;
     // Generate vertical padding
-    string y_padding_string = "";
-    for (unsigned int y = 0; y < y_spacing; y++)
-        y_padding_string += generate_x_padding_string(depth, x_spacing) + "│\n";
+    std::string y_padding_string = "";
+    for (unsigned int y = 0; y < y_spacing; y++) {
+        if (depth > 0 || y > 0) // Avoid leading newline for the first entry
+            y_padding_string += generate_x_padding_string(depth, x_spacing) + "│\n";
+    }
     // Generate horizontal padding and hierarchy symbols
     string x_padding_string = generate_x_padding_string(depth, x_spacing);    
     x_padding_string += generate_hierarchy_format_string(level_states[depth]);
@@ -126,6 +153,46 @@ unsigned int get_directory_entry_count(string& directory_path) {
     for (const auto& entry : fs::directory_iterator(directory_path))
         count++;
     return count; 
+}
+
+/**
+ * @brief Processes the entries in a directory and updates the hierarchy.
+ *
+ * @param path The current directory path.
+ * @param x_spacing The number of spaces for horizontal padding.
+ * @param y_spacing The number of lines for vertical padding.
+ * @param depth The current depth in the directory hierarchy.
+ * @param entry_count The total number of entries in the directory.
+ */
+void process_directory_entries(
+    const std::string& path,
+    unsigned int x_spacing,
+    unsigned int y_spacing,
+    unsigned int depth,
+    unsigned int entry_count
+) {
+    int entry_index = 0;
+    for (const auto& entry : fs::directory_iterator(path)) {
+        entry_index++;
+        // Update the level state based on entry position
+        level_states[depth] = (entry_index != entry_count) 
+            ? ITERATING
+            : NOT_ITERATING;
+        if (fs::is_regular_file(entry)) {
+            // Handle regular file
+            std::string filename = entry.path().filename().string();
+            std::string entry_string = generate_entry_string(
+                filename, x_spacing, y_spacing, depth
+            );
+            std::cout << entry_string << std::endl;
+        } else if (fs::is_directory(entry)) {
+            // Handle subdirectory recursively
+            std::string entry_path = entry.path().string();
+            generate_directory_hierarchy(
+                entry_path, x_spacing, y_spacing, depth
+            );
+        }
+    }
 }
 
 /**
@@ -176,30 +243,8 @@ void generate_directory_hierarchy(
     
     // TODO: Implement sorting of directory entries here
     
-    int entry_index = 0;
-    for (const auto& entry : fs::directory_iterator(path)) {
-        entry_index++;
-        // Update the level state based on entry position
-        level_states[depth] = (entry_index != entry_count) 
-            ? ITERATING
-            : NOT_ITERATING;
-        if (fs::is_regular_file(entry)) {
-            // Handle regular file
-            string filename = entry.path().filename().string();
-            string entry_string = generate_entry_string(
-                filename, x_spacing, y_spacing, depth
-            );
-            cout << entry_string << endl;
-        }
-        else if (fs::is_directory(entry)) {
-            // Handle subdirectory recursively
-            string entry_path = entry.path().string();
-            generate_directory_hierarchy(
-                entry_path, x_spacing, y_spacing, depth
-            );
-        }
-    }
-
+    // Process entries
+    process_directory_entries(path, x_spacing, y_spacing, depth, entry_count);
 }
 
 int main(int argc, char* argv[]) {
@@ -225,7 +270,6 @@ int main(int argc, char* argv[]) {
         std::cout << program;
         return 1;
     }
-
     // Retrieve parsed values
     std::string directory_path = program.get<std::string>("directory_path");
     int x_spacing = program.get<int>("--x_spacing");
