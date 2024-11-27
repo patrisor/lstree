@@ -33,13 +33,15 @@ void process_directory_entries(
     unsigned int x_spacing,
     unsigned int y_spacing,
     unsigned int depth,
-    unsigned int entry_count
+    unsigned int entry_count,
+    bool sort_entries = true
 );
 void generate_directory_hierarchy(
     string& path,
     unsigned int x_spacing,
     unsigned int y_spacing,
-    unsigned int depth
+    unsigned int depth = 0,
+    bool sort_entries = true
 );
 string generate_hierarchy_format_string(LevelState state);
 string generate_character_string(unsigned int n, string s);
@@ -163,16 +165,34 @@ unsigned int get_directory_entry_count(string& directory_path) {
  * @param y_spacing The number of lines for vertical padding.
  * @param depth The current depth in the directory hierarchy.
  * @param entry_count The total number of entries in the directory.
+ * @param sort_entries Whether to sort directory entries before processing.
  */
 void process_directory_entries(
-    const std::string& path,
+    const string& path,
     unsigned int x_spacing,
     unsigned int y_spacing,
     unsigned int depth,
-    unsigned int entry_count
+    unsigned int entry_count,
+    bool sort_entries
 ) {
-    int entry_index = 0;
+    // Collect all directory entries
+    std::vector<fs::directory_entry> entries;
     for (const auto& entry : fs::directory_iterator(path)) {
+        entries.push_back(entry);
+    }
+    // Sort entries if the flag is enabled
+    if (sort_entries) {
+        std::sort(entries.begin(), entries.end(), 
+            [](const fs::directory_entry& a, const fs::directory_entry& b) {
+                string filename_a = a.path().filename().string();
+                string filename_b = b.path().filename().string();
+                return filename_a < filename_b;
+            }
+        );
+    }
+    // Process entries
+    int entry_index = 0;
+    for (const auto& entry : entries) {
         entry_index++;
         // Update the level state based on entry position
         level_states[depth] = (entry_index != entry_count) 
@@ -189,7 +209,7 @@ void process_directory_entries(
             // Handle subdirectory recursively
             std::string entry_path = entry.path().string();
             generate_directory_hierarchy(
-                entry_path, x_spacing, y_spacing, depth
+                entry_path, x_spacing, y_spacing, depth, sort_entries
             );
         }
     }
@@ -202,12 +222,14 @@ void process_directory_entries(
  * @param x_spacing The number of spaces for horizontal padding.
  * @param y_spacing The number of lines for vertical padding.
  * @param depth The current depth in the directory hierarchy.
+ * @param sort_entries Whether to sort directory entries.
  */
 void generate_directory_hierarchy(
     string& path,
     unsigned int x_spacing,
     unsigned int y_spacing,
-    unsigned int depth = 0
+    unsigned int depth,
+    bool sort_entries
 ) {
     // Validate path
     if (path.empty()) { 
@@ -240,17 +262,17 @@ void generate_directory_hierarchy(
     depth++;
     // Get the number of entries in the current directory
     unsigned int entry_count = get_directory_entry_count(path);
-    
-    // TODO: Implement sorting of directory entries here
-    
     // Process entries
-    process_directory_entries(path, x_spacing, y_spacing, depth, entry_count);
+    process_directory_entries(
+        path, x_spacing, y_spacing, 
+        depth, entry_count, sort_entries
+    );
 }
 
 int main(int argc, char* argv[]) {
     // Initialize argparse
     argparse::ArgumentParser program("lstree", "1.0");
-    // Define arguments with defaults
+    // Define arguments
     program.add_argument("directory_path")
         .default_value(std::string("."))
         .help("Path to the directory to visualize. Defaults to the current directory.");
@@ -262,6 +284,14 @@ int main(int argc, char* argv[]) {
         .default_value(1)
         .scan<'i', int>() // Parse as integer
         .help("Vertical spacing (number of lines). Defaults to 1.");
+    program.add_argument("-s", "--sort")
+        .default_value(true)
+        .action([](const std::string& value) {
+            if (value == "false" || value == "0") return false;
+            if (value == "true" || value == "1") return true;
+            throw std::runtime_error("Invalid value for --sort. Use 'true' or 'false'.");
+        })
+        .help("Enable or disable sorting of directory entries. Defaults to true.");
     // Parse arguments
     try {
         program.parse_args(argc, argv);
@@ -274,11 +304,16 @@ int main(int argc, char* argv[]) {
     std::string directory_path = program.get<std::string>("directory_path");
     int x_spacing = program.get<int>("--x_spacing");
     int y_spacing = program.get<int>("--y_spacing");
+    bool sort_entries = program.get<bool>("--sort");
 
     // Initialize root level state
     level_states[0] = NO_VALUE;
     // Generate and print the directory hierarchy
-    generate_directory_hierarchy(directory_path, x_spacing, y_spacing);
+    generate_directory_hierarchy(
+        directory_path, 
+        x_spacing, y_spacing, 
+        0, sort_entries
+    );
 
     return 0;
 }
