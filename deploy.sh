@@ -15,7 +15,7 @@ SHELL_CONFIG="$HOME/.zshrc" # Change to .bashrc if using bash
 
 # Ensure the executable exists locally
 if [[ ! -f "$EXECUTABLE" ]]; then
-  echo "Error: $EXECUTABLE not found. Run './make.sh' first."
+  echo "Error: $EXECUTABLE not found. Run 'make' first."
   exit 1
 fi
 
