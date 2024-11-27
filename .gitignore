@@ -1,0 +1,20 @@
+# Ignore the compiled executable
+lstree
+
+# Ignore build directories
+build/
+bin/
+
+# Ignore temporary files
+*.tmp
+*.log
+
+# Ignore object files and binaries
+*.o
+*.obj
+*.exe
+
+# Ignore editor-specific files
+*.swp
+*.swo
+*.DS_Store
