@@ -1,19 +1,25 @@
 # lstree
 
-`lstree` is a command-line tool that generates a visual hierarchy of directories and files, similar to the Unix `tree` command. It's designed to help visualize project structures, making it easier to understand and manage large codebases.
+`lstree` is a powerful command-line tool for visualizing directory and file hierarchies in a tree-like structure. Inspired by the Unix `tree` command, `lstree` helps developers and users understand and navigate complex directory structures with ease.
 
 ## Features
 
-- **Customizable Spacing:** Adjust horizontal and vertical spacing for clear visualization.
-- **Recursive Directory Traversal:** Automatically explores subdirectories.
-- **Simple Integration:** Easily integrate into existing workflows.
+- **Customizable Spacing:** Adjust horizontal (`x-spacing`) and vertical (`y-spacing`) spacing for cleaner visualization.
+- **Sorting:** Enable or disable sorting of directory and file entries.
+- **Ignore Files or Directories:** Specify files or directories to exclude from the output.
+- **Recursive Directory Traversal:** Automatically explores and displays subdirectories.
+- **Dynamic CLI:** Flexible argument parsing with default values for seamless use.
+
+---
 
 ## Installation
 
 ### Prerequisites
 
-- **C++17 Compiler:** Ensure you have a C++17 compatible compiler installed (e.g., `g++`, `clang++`).
-- **Make:** Make sure `make` is installed on your system.
+- **C++20 Compiler:** Ensure you have a C++20 compatible compiler installed (e.g., `g++`, `clang++`).
+- **Make:** Verify that `make` is installed on your system.
+
+---
 
 ### Build and Install
 
@@ -26,10 +32,8 @@
 
 2. **Build the Executable:**
 
-   *(Assuming you have a `make.sh` script to build the project)*
-
    ```bash
-   ./make.sh
+   make
    ```
 
 3. **Deploy `lstree`:**
@@ -44,51 +48,85 @@
    - Create an alias `lst` for simplified usage
    - Reload the shell for immediate use
 
+---
+
 ## Usage
 
 ```bash
-lstree <directory_path> <X_SPACING> <Y_SPACING>
+lstree [OPTIONS] [directory_path]
 ```
 
-- `<directory_path>`: Path to the target directory.
-- `<X_SPACING>`: Number of spaces for horizontal padding.
-- `<Y_SPACING>`: Number of lines for vertical padding.
+### **Options**
 
-**Example:**
+| Option                | Description                                                                 | Default          |
+|-----------------------|-----------------------------------------------------------------------------|------------------|
+| `directory_path`      | Path to the directory to visualize.                                        | Current directory |
+| `-x, --x_spacing`     | Number of spaces for horizontal padding.                                   | 3                |
+| `-y, --y_spacing`     | Number of lines for vertical padding.                                      | 1                |
+| `-s, --sort`          | Enable (`true`) or disable (`false`) sorting of directory entries.         | `true`           |
+| `-i, --ignore`        | List of file or directory names to exclude from the output.                | None             |
+
+---
+
+### **Examples**
+
+#### **Default Usage**
+
+Visualize the current directory structure:
 
 ```bash
-lstree tests/ 3 1
+lstree
 ```
 
-**Output:**
+#### **Custom Spacing**
 
+Specify horizontal and vertical spacing:
+
+```bash
+lstree -x 5 -y 2
+```
+
+#### **Ignore Files or Directories**
+
+Exclude `.git` and `node_modules` from the output:
+
+```bash
+lstree --ignore .git node_modules
+```
+
+#### **Disable Sorting**
+
+Visualize the directory without sorting:
+
+```bash
+lstree --sort=false
+```
+
+---
+
+### **Sample Output**
+
+Command:
+```bash
+lstree tests/ -x 3 -y 1 --ignore .git .gitignore
+```
+
+Output:
 ```
 tests/
-│
-└───test1/
-    │
-    ├───dist/
-    │   │
-    │   ├───css/
-    │   │
-    │   ├───js/
-    │   │
-    │   └───fonts/
-    │
-    ├───less/
-    │
-    ├───js/
-    │
-    ├───docs/
-    │   │
-    │   └───examples/
-    │
-    └───fonts/
+├───subdir1/
+│   ├───file1.txt
+│   └───file2.txt
+└───file3.txt
+
+2 directories, 3 files
 ```
+
+---
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
+We welcome contributions! Feel free to open an issue or submit a pull request for new features, bug fixes, or improvements.
 
 ## License
 
