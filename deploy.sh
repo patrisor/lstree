@@ -1,11 +1,7 @@
 #!/bin/bash
 
 # Deploy script for lstree
-# This script automates the installation of lstree globally:
-# - Moves the executable to a directory in your PATH
-# - Sets executable permissions
-# - Creates an alias 'lst'
-# - Reloads the shell for immediate use
+# Automates the installation of lstree globally
 
 # Variables
 EXECUTABLE="lstree"
@@ -37,18 +33,14 @@ fi
 
 # Add alias to shell config
 echo "Creating alias '$ALIAS_NAME' for $EXECUTABLE..."
-if ! grep -q "alias $ALIAS_NAME=" "$SHELL_CONFIG"; then
+if ! grep -Fxq "alias $ALIAS_NAME='$EXECUTABLE'" "$SHELL_CONFIG"; then
   echo "alias $ALIAS_NAME='$EXECUTABLE'" >> "$SHELL_CONFIG"
 else
   echo "Alias '$ALIAS_NAME' already exists in $SHELL_CONFIG."
 fi
 
-# Reload the shell
-echo "Reloading shell configuration..."
-source "$SHELL_CONFIG"
-if [[ $? -ne 0 ]]; then
-  echo "Error: Failed to reload shell configuration."
-  exit 1
-fi
-
+# Prompt user to reload shell configuration
+echo
+echo "Please reload your shell configuration manually by running:"
+echo "source $SHELL_CONFIG"
 echo "$EXECUTABLE installed successfully! Use '$ALIAS_NAME' to run it."
