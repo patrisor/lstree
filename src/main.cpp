@@ -27,7 +27,12 @@ enum LevelState {
 // Maps each directory depth level to its current iteration state.
 map<int, LevelState> level_states;
 
+// Other variables
+unsigned int directory_count = 0;
+unsigned int file_count = 0;
+
 // Function Declarations
+unsigned int get_directory_entry_count(const string& directory_path);
 void process_directory_entries(
     const string& path,
     unsigned int x_spacing,
@@ -43,6 +48,12 @@ void generate_directory_hierarchy(
     unsigned int depth = 0,
     bool sort_entries = true
 );
+bool path_is_valid(
+    const string& path,
+    unsigned int x_spacing,
+    unsigned int y_spacing,
+    unsigned int depth
+);
 string generate_hierarchy_format_string(LevelState state);
 string generate_character_string(unsigned int n, string s);
 string generate_x_padding_string(unsigned int depth, unsigned int x_spacing);
@@ -52,7 +63,6 @@ string generate_entry_string(
     unsigned int y_spacing,
     unsigned int depth
 );
-unsigned int get_directory_entry_count(const string& directory_path);
 
 /**
  * @brief Generates the hierarchy format string based on the level state.
@@ -123,7 +133,7 @@ string generate_x_padding_string(unsigned int depth, unsigned int x_spacing) {
  * @return The formatted entry string.
  */
 string generate_entry_string(
-	string& path,
+	const string& path,
 	unsigned int x_spacing,
 	unsigned int y_spacing,
 	unsigned int depth
@@ -155,6 +165,48 @@ unsigned int get_directory_entry_count(string& directory_path) {
     for (const auto& entry : fs::directory_iterator(directory_path))
         count++;
     return count; 
+}
+
+/**
+ * @brief Validates the given path and handles it if it's a file or invalid.
+ *
+ * If the path is a file, it increments the file count, prints the file, and returns false
+ * to indicate further processing should stop. If the path is invalid, it logs an error and
+ * also returns false. If the path is a valid directory, it returns true to allow further processing.
+ *
+ * @param path The path to validate.
+ * @param x_spacing The number of spaces for horizontal padding.
+ * @param y_spacing The number of lines for vertical padding.
+ * @param depth The current depth in the directory hierarchy.
+ * @return true if the path is a valid directory, false otherwise.
+ */
+bool path_is_valid(
+    const string& path,
+    unsigned int x_spacing,
+    unsigned int y_spacing,
+    unsigned int depth
+) {
+    if (path.empty()) { 
+        cerr << "Error: Path is empty!" << endl;
+        return false;
+    }
+    // Check if the path is a file
+    if (fs::is_regular_file(path)) {
+        // Increment file count
+        file_count++;
+        // Print the file as a single entry
+        std::string entry_string = generate_entry_string(
+            path, x_spacing, y_spacing, depth
+        );
+        std::cout << entry_string << std::endl;
+        return false; // Path is a file
+    }
+    // Check if the path is a directory
+    if (!fs::is_directory(path)) {
+        cerr << "Error: Path is neither a file nor a directory!" << endl;
+        return false; // Invalid path
+    }
+    return true; // Path is a valid directory
 }
 
 /**
@@ -199,6 +251,8 @@ void process_directory_entries(
             ? ITERATING
             : NOT_ITERATING;
         if (fs::is_regular_file(entry)) {
+            // Increment file count
+            file_count++;
             // Handle regular file
             std::string filename = entry.path().filename().string();
             std::string entry_string = generate_entry_string(
@@ -206,6 +260,8 @@ void process_directory_entries(
             );
             std::cout << entry_string << std::endl;
         } else if (fs::is_directory(entry)) {
+            // Increment directory count
+            directory_count++;
             // Handle subdirectory recursively
             std::string entry_path = entry.path().string();
             generate_directory_hierarchy(
@@ -231,11 +287,8 @@ void generate_directory_hierarchy(
     unsigned int depth,
     bool sort_entries
 ) {
-    // Validate path
-    if (path.empty()) { 
-        cerr << "Error: Path is empty!" << endl;
-        return;
-    }
+    // Validate the path
+    if (!path_is_valid(path, x_spacing, y_spacing, depth)) return;
     // Ensure path ends with '/'
     if (path.back() != '/') 
         path += "/";
@@ -306,14 +359,31 @@ int main(int argc, char* argv[]) {
     int y_spacing = program.get<int>("--y_spacing");
     bool sort_entries = program.get<bool>("--sort");
 
+    // TODO: Convert to class initializer
     // Initialize root level state
     level_states[0] = NO_VALUE;
+    // Check if input path is a file
+    if (fs::is_regular_file(directory_path)) {
+        file_count = 1;
+        generate_directory_hierarchy(directory_path, x_spacing, y_spacing, 0, sort_entries);
+        std::cout << "\n0 directories, 1 file\n";
+        return 0;
+    }
+    // If input is a directory, include root directory in the count
+    if (fs::is_directory(directory_path)) {
+        directory_count = 1; // Count the root directory
+    }
     // Generate and print the directory hierarchy
     generate_directory_hierarchy(
         directory_path, 
         x_spacing, y_spacing, 
         0, sort_entries
     );
+    // Print summary
+    std::cout << "\n" << directory_count 
+              << (directory_count == 1 ? " directory, " : " directories, ")
+              << file_count 
+              << (file_count == 1 ? " file\n" : " files\n");
 
     return 0;
 }
