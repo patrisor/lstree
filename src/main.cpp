@@ -9,6 +9,7 @@ using std::cerr;
 using std::cout;
 using std::endl;
 using std::stoul;
+using std::vector;
 using std::string;
 using std::wstring;
 
@@ -39,14 +40,16 @@ void process_directory_entries(
     unsigned int y_spacing,
     unsigned int depth,
     unsigned int entry_count,
-    bool sort_entries = true
+    bool sort_entries = true,
+    const vector<string>& ignore_list = {}
 );
 void generate_directory_hierarchy(
     string& path,
     unsigned int x_spacing,
     unsigned int y_spacing,
     unsigned int depth = 0,
-    bool sort_entries = true
+    bool sort_entries = true,
+    const vector<string>& ignore_list = {}
 );
 bool path_is_valid(
     const string& path,
@@ -141,7 +144,7 @@ string generate_entry_string(
     if (level_states[depth] == NO_VALUE)
         return path;
     // Generate vertical padding
-    std::string y_padding_string = "";
+    string y_padding_string = "";
     for (unsigned int y = 0; y < y_spacing; y++) {
         if (depth > 0 || y > 0) // Avoid leading newline for the first entry
             y_padding_string += generate_x_padding_string(depth, x_spacing) + "│\n";
@@ -195,10 +198,10 @@ bool path_is_valid(
         // Increment file count
         file_count++;
         // Print the file as a single entry
-        std::string entry_string = generate_entry_string(
+        string entry_string = generate_entry_string(
             path, x_spacing, y_spacing, depth
         );
-        std::cout << entry_string << std::endl;
+        cout << entry_string << endl;
         return false; // Path is a file
     }
     // Check if the path is a directory
@@ -218,6 +221,7 @@ bool path_is_valid(
  * @param depth The current depth in the directory hierarchy.
  * @param entry_count The total number of entries in the directory.
  * @param sort_entries Whether to sort directory entries before processing.
+ * @param ignore_list List of file or directory names to ignore.
  */
 void process_directory_entries(
     const string& path,
@@ -225,11 +229,16 @@ void process_directory_entries(
     unsigned int y_spacing,
     unsigned int depth,
     unsigned int entry_count,
-    bool sort_entries
+    bool sort_entries,
+    const vector<string>& ignore_list
 ) {
     // Collect all directory entries
-    std::vector<fs::directory_entry> entries;
+    vector<fs::directory_entry> entries;
     for (const auto& entry : fs::directory_iterator(path)) {
+        // Skip ignored names
+        string name = entry.path().filename().string();
+        auto it = std::find(ignore_list.begin(), ignore_list.end(), name);
+        if (it != ignore_list.end()) continue;
         entries.push_back(entry);
     }
     // Sort entries if the flag is enabled
@@ -254,16 +263,16 @@ void process_directory_entries(
             // Increment file count
             file_count++;
             // Handle regular file
-            std::string filename = entry.path().filename().string();
-            std::string entry_string = generate_entry_string(
+            string filename = entry.path().filename().string();
+            string entry_string = generate_entry_string(
                 filename, x_spacing, y_spacing, depth
             );
-            std::cout << entry_string << std::endl;
+            cout << entry_string << endl;
         } else if (fs::is_directory(entry)) {
             // Increment directory count
             directory_count++;
             // Handle subdirectory recursively
-            std::string entry_path = entry.path().string();
+            string entry_path = entry.path().string();
             generate_directory_hierarchy(
                 entry_path, x_spacing, y_spacing, depth, sort_entries
             );
@@ -279,13 +288,15 @@ void process_directory_entries(
  * @param y_spacing The number of lines for vertical padding.
  * @param depth The current depth in the directory hierarchy.
  * @param sort_entries Whether to sort directory entries.
+ * @param ignore_list List of file or directory names to ignore.
  */
 void generate_directory_hierarchy(
     string& path,
     unsigned int x_spacing,
     unsigned int y_spacing,
     unsigned int depth,
-    bool sort_entries
+    bool sort_entries,
+    const vector<string>& ignore_list
 ) {
     // Validate the path
     if (!path_is_valid(path, x_spacing, y_spacing, depth)) return;
@@ -318,7 +329,8 @@ void generate_directory_hierarchy(
     // Process entries
     process_directory_entries(
         path, x_spacing, y_spacing, 
-        depth, entry_count, sort_entries
+        depth, entry_count, sort_entries,
+        ignore_list
     );
 }
 
@@ -327,7 +339,8 @@ int main(int argc, char* argv[]) {
     argparse::ArgumentParser program("lstree", "1.0");
     // Define arguments
     program.add_argument("directory_path")
-        .default_value(std::string("."))
+        .nargs(1)
+        .default_value(vector<string>{"."})
         .help("Path to the directory to visualize. Defaults to the current directory.");
     program.add_argument("-x", "--x_spacing")
         .default_value(3)
@@ -339,25 +352,30 @@ int main(int argc, char* argv[]) {
         .help("Vertical spacing (number of lines). Defaults to 1.");
     program.add_argument("-s", "--sort")
         .default_value(true)
-        .action([](const std::string& value) {
+        .action([](const string& value) {
             if (value == "false" || value == "0") return false;
             if (value == "true" || value == "1") return true;
             throw std::runtime_error("Invalid value for --sort. Use 'true' or 'false'.");
         })
         .help("Enable or disable sorting of directory entries. Defaults to true.");
+    program.add_argument("-i", "--ignore")
+        .default_value(vector<string>{})
+        .append()
+        .help("List of file or directory names to ignore.");
     // Parse arguments
     try {
         program.parse_args(argc, argv);
     } catch (const std::runtime_error& err) {
-        std::cerr << "Error: " << err.what() << std::endl;
-        std::cout << program;
+        cerr << "Error: " << err.what() << endl;
+        cout << program;
         return 1;
     }
     // Retrieve parsed values
-    std::string directory_path = program.get<std::string>("directory_path");
+    string directory_path = program.get<vector<string>>("directory_path")[0];
     int x_spacing = program.get<int>("--x_spacing");
     int y_spacing = program.get<int>("--y_spacing");
     bool sort_entries = program.get<bool>("--sort");
+    vector<string> ignore_list = program.get<vector<string>>("--ignore");
 
     // TODO: Convert to class initializer
     // Initialize root level state
@@ -366,7 +384,7 @@ int main(int argc, char* argv[]) {
     if (fs::is_regular_file(directory_path)) {
         file_count = 1;
         generate_directory_hierarchy(directory_path, x_spacing, y_spacing, 0, sort_entries);
-        std::cout << "\n0 directories, 1 file\n";
+        cout << "\n0 directories, 1 file\n";
         return 0;
     }
     // If input is a directory, include root directory in the count
@@ -377,13 +395,13 @@ int main(int argc, char* argv[]) {
     generate_directory_hierarchy(
         directory_path, 
         x_spacing, y_spacing, 
-        0, sort_entries
+        0, sort_entries, ignore_list
     );
     // Print summary
-    std::cout << "\n" << directory_count 
-              << (directory_count == 1 ? " directory, " : " directories, ")
-              << file_count 
-              << (file_count == 1 ? " file\n" : " files\n");
+    cout << "\n" << directory_count 
+         << (directory_count == 1 ? " directory, " : " directories, ")
+         << file_count 
+         << (file_count == 1 ? " file\n" : " files\n");
 
     return 0;
 }
