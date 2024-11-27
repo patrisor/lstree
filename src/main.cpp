@@ -207,7 +207,7 @@ void generate_directory_hierarchy(
     string& path,
     unsigned int x_spacing,
     unsigned int y_spacing,
-    unsigned int depth
+    unsigned int depth = 0
 ) {
     // Validate path
     if (path.empty()) { 
@@ -278,7 +278,7 @@ int main(int argc, char* argv[]) {
     // Initialize root level state
     level_states[0] = NO_VALUE;
     // Generate and print the directory hierarchy
-    generate_directory_hierarchy(directory_path, x_spacing, y_spacing, 0);
+    generate_directory_hierarchy(directory_path, x_spacing, y_spacing);
 
     return 0;
 }
